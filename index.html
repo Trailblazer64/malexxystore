@@ -93,6 +93,34 @@ html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 110px)}
 .nav a{color:var(--muted);text-decoration:none;font-weight:500;padding:6px 2px;border-bottom:2px solid transparent}
 .nav a:hover{color:var(--ink);border-bottom-color:var(--accent)}
 @media(max-width:700px){.bar{height:auto;flex-wrap:wrap;padding:10px 20px 0;gap:8px}.logo{font-size:19px;gap:8px}.mk{width:30px;height:30px;font-size:18px;border-radius:9px}.logo small{font-size:13px}.tools{margin-left:auto;gap:6px}.tools select{padding:7px 8px;font-size:13px}.tools .btn.sm{padding:9px 14px}.nav{order:3;width:100%;justify-content:space-around;gap:8px;border-top:1px solid var(--line);margin:4px -20px 0;padding:0 20px}.nav a{padding:10px 8px}}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;overflow-x:hidden}
+body{overflow-x:clip}
+img,svg{max-width:100%}
+.hero>*,.story>*,.grid>*{min-width:0}
+.grid{grid-template-columns:repeat(auto-fill,minmax(min(250px,100%),1fr))}
+.swatches{flex-wrap:wrap}
+.btn{min-height:44px}
+@media(max-width:700px){
+input,select,textarea{font-size:16px!important}
+.bar{padding:10px 16px 0}
+.nav{margin:4px -16px 0;padding:0 16px}
+.wrap{padding-left:16px;padding-right:16px}
+.bar.wrap{padding:10px 16px 0}
+.hero{padding:24px 0 16px;gap:20px}
+.hero h1{font-size:34px}
+.hero p{font-size:16px;margin:14px 0 22px}
+.stage{padding:18px 14px 16px;border-radius:22px}
+.th{width:48px;height:48px}
+.swatches{gap:8px}
+.perks{padding-bottom:36px}
+.story{padding:30px 22px;margin:44px 0;border-radius:22px}
+.head h2,.story h2,.contact h2{font-size:28px}
+.grid{gap:16px}
+.card .row{flex-wrap:wrap}
+}
+#ov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:45;opacity:0;pointer-events:none;transition:opacity .3s}
+#ov.show{opacity:1;pointer-events:auto}
+#x{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:16px;width:40px;height:40px;border-radius:50%;border:1.5px solid var(--line);background:transparent;color:var(--ink);font:400 26px/1 system-ui,sans-serif;cursor:pointer;padding:0}
 </style>
 </head>
 <body>
@@ -138,7 +166,9 @@ html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 110px)}
   </section>
 </main>
 <footer><div class="wrap"><span id="copy"></span><span id="mail"></span></div></footer>
+<div id="ov"></div>
 <aside id="drawer" aria-label="Shopping cart" aria-hidden="true">
+  <button id="x" aria-label="Close cart">×</button>
   <h2>Your cart</h2><div id="items"></div>
   <div class="total"><span>Total</span><span id="total"></span></div>
   <div class="cust" id="cust"><input id="cName" placeholder="Full name" autocomplete="name" aria-label="Full name"><input id="cPhone" type="tel" placeholder="Phone number" autocomplete="tel" aria-label="Phone number"><input id="cEmail" type="email" placeholder="Email (optional)" autocomplete="email" aria-label="Email"><input id="cAddr" placeholder="Delivery address, city and country" autocomplete="street-address" aria-label="Delivery address"></div>
@@ -156,7 +186,7 @@ var CONFIG={
   email:"malikakinwunmi50@gmail.com",
   paystackLink:"",            // paste your Paystack payment link (Naira)
   stripeLink:"",              // paste your Stripe payment link (US dollars)
-  bankDetails:"Opay 7080211206",             // e.g. "GTBank 0123456789, Malexxy Store"
+  bankDetails:"Opay 7080211206, Akinwunmi Malik Olamide",             // e.g. "GTBank 0123456789, Malexxy Store"
   defaultCurrency:"NGN"
 };
 var SYMBOL={NGN:"₦",USD:"$"};
@@ -219,9 +249,11 @@ function renderCart(){
  if(CONFIG.stripeLink)add("Pay by card (USD)",function(){window.open(CONFIG.stripeLink,"_blank")},true);
  if(CONFIG.bankDetails){var n=document.createElement("p");n.className="meta";n.textContent="Bank transfer: "+CONFIG.bankDetails;pay.appendChild(n)}
 }
-function drawer(o){$("drawer").classList.toggle("open",o);$("drawer").setAttribute("aria-hidden",!o)}
+function drawer(o){$("drawer").classList.toggle("open",o);$("ov").classList.toggle("show",o);$("drawer").setAttribute("aria-hidden",!o)}
 $("openCart").onclick=function(){drawer(true)};
 $("closeCart").onclick=function(){drawer(false)};
+$("x").onclick=function(){drawer(false)};
+$("ov").onclick=function(){drawer(false)};
 $("cur").onchange=function(){state.cur=this.value;renderHero();renderGrid();renderCart()};
 document.addEventListener("keydown",function(e){if(e.key==="Escape")drawer(false)});
 document.title=CONFIG.brand+" | Sneakers";
