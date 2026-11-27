@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Malexxy Store Admin</title>
+<style>
+:root{--bg:#F4F2EF;--surface:#fff;--ink:#1B1A19;--muted:#66625C;--line:#E0DCD5;--accent:#14604A;--danger:#B3261E}
+@media(prefers-color-scheme:dark){:root{--bg:#121110;--surface:#1B1A18;--ink:#F1EEE9;--muted:#A39E95;--line:#2D2B28;--accent:#4FC3A1;--danger:#FF8A80}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:720px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:26px;margin:0}
+.box{max-width:380px;margin:12vh auto 0;background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:28px 22px;display:grid;gap:12px}
+input,textarea,button{font:inherit;font-size:16px}
+input[type=text],input[type=email],input[type=password],input[type=number],textarea{width:100%;padding:12px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink)}
+button{border:0;border-radius:999px;padding:12px 20px;font-weight:700;background:var(--accent);color:#fff;cursor:pointer;min-height:44px}
+button.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+button.danger{background:transparent;color:var(--danger);border:1.5px solid var(--line)}
+button:disabled{opacity:.5}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
+.err{color:var(--danger);margin:0;min-height:1.2em}
+.muted{color:var(--muted);margin:0}
+.item{display:flex;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px;margin-top:12px}
+.item img{width:84px;height:84px;object-fit:cover;border-radius:12px;background:var(--line);flex:none}
+.item .info{flex:1;min-width:0}
+.item b{display:block;overflow-wrap:anywhere}
+.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.acts button{padding:8px 14px;min-height:40px;font-size:14px}
+.tag{display:inline-block;background:var(--danger);color:#fff;border-radius:999px;font-size:12px;padding:1px 8px;margin-left:6px}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center;z-index:10}
+#modal[hidden],#app[hidden],#login[hidden]{display:none}
+.sheet{background:var(--surface);width:100%;max-width:520px;max-height:92vh;overflow:auto;border-radius:22px 22px 0 0;padding:20px 18px 28px;display:grid;gap:12px}
+label{font-weight:600;font-size:14px;display:grid;gap:6px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#pv{max-width:160px;border-radius:12px;display:none}
+.chk{display:flex;align-items:center;gap:10px;font-weight:600}
+.chk input{width:22px;height:22px}
+</style>
+</head>
+<body>
+
+<div id="login" class="box">
+  <h1>Malexxy Store Admin</h1>
+  <p class="muted">Owner login</p>
+  <input id="em" type="email" placeholder="Email" autocomplete="username">
+  <input id="pw" type="password" placeholder="Password" autocomplete="current-password">
+  <button id="go">Log in</button>
+  <p id="err" class="err" role="alert"></p>
+</div>
+
+<div id="app" class="wrap" hidden>
+  <div class="top"><h1>Your shoes</h1><button class="ghost" id="out">Log out</button></div>
+  <button id="add">+ Add a shoe</button>
+  <p id="msg" class="muted" style="margin-top:12px"></p>
+  <div id="list"></div>
+</div>
+
+<div id="modal" hidden>
+  <form class="sheet" id="form">
+    <h1 id="mt">Add a shoe</h1>
+    <label>Name<input id="fn" type="text" required maxlength="80" placeholder="e.g. Black Low-Top Sneaker"></label>
+    <label>Short description<input id="fd" type="text" maxlength="120" placeholder="e.g. Soft knit upper, cushioned sole"></label>
+    <div class="two">
+      <label>Price in naira (₦)<input id="fp" type="number" inputmode="numeric" min="1" required placeholder="30000"></label>
+      <label>Price in dollars ($)<input id="fu" type="number" inputmode="numeric" min="1" placeholder="22"></label>
+    </div>
+    <label>Photo<input id="ff" type="file" accept="image/*"></label>
+    <img id="pv" alt="Photo preview">
+    <label class="chk"><input id="fs" type="checkbox"> Sold out</label>
+    <p id="ferr" class="err" role="alert"></p>
+    <button type="submit" id="fsave">Save shoe</button>
+    <button type="button" class="ghost" id="fcancel">Cancel</button>
+  </form>
+</div>
+
+<script>
+/* ===== PASTE YOUR SUPABASE DETAILS HERE ===== */
+var CFG={url:"https://vcshtxozwsqyumnvdmlu.supabase.co",key:"sb_publishable_HoSsEcWLXw9VhxjmnF4NoA__1hoS65O"};
+/* ============================================ */
+
+function $(i){return document.getElementById(i)}
+var S=null,items=[],editing=null;
+try{S=JSON.parse(localStorage.getItem("mx_session")||"null")}catch(e){}
+function setSession(s){S=s;try{if(s){s.exp=Date.now()+(s.expires_in||3600)*1000-60000;localStorage.setItem("mx_session",JSON.stringify(s))}else localStorage.removeItem("mx_session")}catch(e){}}
+async function token(body,grant){
+  var r=await fetch(CFG.url+"/auth/v1/token?grant_type="+grant,{method:"POST",headers:{apikey:CFG.key,"Content-Type":"application/json"},body:JSON.stringify(body)});
+  var j=await r.json();
+  if(!r.ok)throw new Error(j.error_description||j.msg||"Login failed. Check your email and password.");
+  setSession(j);return j;
+}
+async function ensure(){
+  if(!S)throw new Error("Please log in");
+  if(Date.now()>S.exp){try{await token({refresh_token:S.refresh_token},"refresh_token")}catch(e){setSession(null);show(false);throw new Error("Please log in again")}}
+}
+async function api(path,method,body,extra){
+  await ensure();
+  var h={apikey:CFG.key,Authorization:"Bearer "+S.access_token,"Content-Type":"application/json"};
+  for(var k in extra)h[k]=extra[k];
+  var r=await fetch(CFG.url+path,{method:method||"GET",headers:h,body:body?JSON.stringify(body):undefined});
+  if(!r.ok){var t="";try{t=(await r.json()).message}catch(e){}throw new Error(t||"Something went wrong ("+r.status+")")}
+  return r.status===204?null:r.text().then(function(x){return x?JSON.parse(x):null});
+}
+function shrink(file){
+  return new Promise(function(res,rej){
+    var im=new Image();
+    im.onload=function(){var s=Math.min(1,900/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);c.getContext("2d").drawImage(im,0,0,c.width,c.height);c.toBlob(function(b){b?res(b):rej(new Error("Could not read the photo"))},"image/jpeg",.82)};
+    im.onerror=function(){rej(new Error("Could not read the photo"))};
+    im.src=window.URL.createObjectURL(file);
+  });
+}
+async function upload(file){
+  await ensure();
+  var blob=await shrink(file),name=Date.now()+"-"+Math.random().toString(36).slice(2,8)+".jpg";
+  var r=await fetch(CFG.url+"/storage/v1/object/shoes/"+name,{method:"POST",headers:{apikey:CFG.key,Authorization:"Bearer "+S.access_token,"Content-Type":"image/jpeg"},body:blob});
+  if(!r.ok)throw new Error("Photo upload failed ("+r.status+")");
+  return CFG.url+"/storage/v1/object/public/shoes/"+name;
+}
+function show(loggedIn){$("login").hidden=loggedIn;$("app").hidden=!loggedIn}
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+async function load(){
+  $("msg").textContent="Loading…";
+  try{items=await api("/rest/v1/products?select=*&order=sort.asc,id.desc");render()}catch(e){$("msg").textContent=e.message}
+}
+function render(){
+  $("msg").textContent=items.length?"":"No shoes yet. Tap “Add a shoe” to start.";
+  $("list").innerHTML=items.map(function(p){
+    return '<div class="item">'+(p.image_url?'<img src="'+esc(p.image_url)+'" alt="">':'<img alt="">')+
+    '<div class="info"><b>'+esc(p.name)+(p.sold_out?'<span class="tag">Sold out</span>':'')+'</b>'+
+    '<span class="muted">₦'+Number(p.price_ngn).toLocaleString("en-US")+(p.price_usd?' · $'+p.price_usd:'')+'</span>'+
+    '<div class="acts"><button class="ghost" data-a="edit" data-id="'+p.id+'">Edit</button>'+
+    '<button class="ghost" data-a="sold" data-id="'+p.id+'">'+(p.sold_out?'Back in stock':'Mark sold out')+'</button>'+
+    '<button class="danger" data-a="del" data-id="'+p.id+'">Delete</button></div></div></div>';
+  }).join("");
+}
+$("list").onclick=async function(e){
+  var b=e.target.closest("button");if(!b)return;
+  var p=items.filter(function(x){return String(x.id)===b.dataset.id})[0];if(!p)return;
+  try{
+    if(b.dataset.a==="edit")openForm(p);
+    else if(b.dataset.a==="sold"){await api("/rest/v1/products?id=eq."+p.id,"PATCH",{sold_out:!p.sold_out});load()}
+    else if(b.dataset.a==="del"&&confirm("Delete “"+p.name+"”? This cannot be undone.")){await api("/rest/v1/products?id=eq."+p.id,"DELETE");load()}
+  }catch(err){alert(err.message)}
+};
+function openForm(p){
+  editing=p||null;$("mt").textContent=p?"Edit shoe":"Add a shoe";$("ferr").textContent="";
+  $("fn").value=p?p.name:"";$("fd").value=p?p.note||"":"";$("fp").value=p?p.price_ngn:"";$("fu").value=p&&p.price_usd?p.price_usd:"";
+  $("fs").checked=!!(p&&p.sold_out);$("ff").value="";
+  $("pv").style.display=p&&p.image_url?"block":"none";$("pv").src=p&&p.image_url?p.image_url:"";
+  $("modal").hidden=false;
+}
+$("add").onclick=function(){openForm(null)};
+$("fcancel").onclick=function(){$("modal").hidden=true};
+$("ff").onchange=function(){var f=this.files[0];if(f){$("pv").src=window.URL.createObjectURL(f);$("pv").style.display="block"}};
+$("form").onsubmit=async function(e){
+  e.preventDefault();var btn=$("fsave");btn.disabled=true;btn.textContent="Saving…";$("ferr").textContent="";
+  try{
+    var f=$("ff").files[0],img=editing?editing.image_url:null;
+    if(f)img=await upload(f);
+    if(!img)throw new Error("Please choose a photo");
+    var body={name:$("fn").value.trim(),note:$("fd").value.trim(),price_ngn:parseInt($("fp").value,10),price_usd:$("fu").value?parseInt($("fu").value,10):null,image_url:img,sold_out:$("fs").checked};
+    if(editing)await api("/rest/v1/products?id=eq."+editing.id,"PATCH",body);
+    else await api("/rest/v1/products","POST",body,{Prefer:"return=minimal"});
+    $("modal").hidden=true;load();
+  }catch(err){$("ferr").textContent=err.message}
+  btn.disabled=false;btn.textContent="Save shoe";
+};
+$("go").onclick=async function(){
+  $("err").textContent="";this.disabled=true;
+  try{await token({email:$("em").value.trim(),password:$("pw").value},"password");$("pw").value="";show(true);load()}
+  catch(e){$("err").textContent=e.message}
+  this.disabled=false;
+};
+$("pw").onkeydown=function(e){if(e.key==="Enter")$("go").click()};
+$("out").onclick=function(){setSession(null);show(false)};
+if(CFG.url.indexOf("PASTE")===0){$("err").textContent="Setup needed: add your Supabase details at the top of admin.html."}
+else if(S){show(true);load()}
+</script>
+</body>
+</html>
